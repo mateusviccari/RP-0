@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq;
+using UniLinq;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -24,6 +24,7 @@ namespace RP0
         protected BaseEvent tEvent;
         protected Dictionary<string, float> reducerDict;
         protected bool onStartFinished;
+        protected bool onStartFinishedFinished;
 
         public virtual string ToolingType => toolingType;
         public virtual string ToolingTypeTitle => string.IsNullOrEmpty(toolingTypeTitle) ? ToolingType : toolingTypeTitle;
@@ -50,7 +51,7 @@ namespace RP0
 
             bool bypass = HighLogic.CurrentGame.Parameters.Difficulty.BypassEntryPurchaseAfterResearch;
             float toolingCost = bypass ? 0f : GetToolingCost();
-            bool canAfford = bypass || Funding.Instance.Funds >= toolingCost;
+            bool canAfford = CurrencyModifierQuery.RunQuery(TransactionReasonsRP0.ToolingPurchase.Stock(), -toolingCost, 0f, 0f).CanAfford();
 
             PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f),
                         new Vector2(0.5f, 0.5f),
@@ -70,7 +71,7 @@ namespace RP0
                                         {
                                             using (new CareerEventScope(CareerEventType.Tooling)) 
                                             {
-                                                Funding.Instance.AddFunds(-toolingCost, TransactionReasons.RnDPartPurchase);
+                                                Funding.Instance.AddFunds(-toolingCost, TransactionReasonsRP0.ToolingPurchase.Stock());
                                             }
                                             PurchaseTooling();
                                             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
@@ -119,6 +120,11 @@ namespace RP0
             onStartFinished = true;
 
             TryApplyToolingDefinition();
+        }
+
+        public override void OnStartFinished(StartState state)
+        {
+            onStartFinishedFinished = true;
         }
 
         protected virtual void LoadPartModules()
@@ -223,7 +229,7 @@ namespace RP0
                 {
                     using (new CareerEventScope(CareerEventType.Tooling))
                     {
-                        Funding.Instance.AddFunds(-totalCost, TransactionReasons.RnDPartPurchase);
+                        Funding.Instance.AddFunds(-totalCost, TransactionReasonsRP0.ToolingPurchase.Stock());
                     }
                 }
             }
